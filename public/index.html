@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Simple Chat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid bg-nav">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">
+                    <img alt="Brand" src="/img/ghost.png">
+                </a>
+                <p class="navbar-text brand-title">Anon<span>room</span></p>
+            </div>
+        </div>
+    </nav>
+    <div class="modal fade" id="modalJoin" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="row">
+                        <form id="formJoin">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="txtNama" class="form-control-label">Nama :</label>
+                                    <input type="text" class="form-control" id="txtNama" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="txtEmail" class="form-control-label">Email :</label>
+                                    <input type="email" class="form-control" id="txtEmail" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gender" class="form-control-label">Gender:</label>
+                                    <div class="btn-group" data-toggle="buttons">
+                                        <label class="btn btn-primary active">
+                                        <input type="radio" name="gender" value="male" checked>
+                                            Male
+                                    </label>
+                                        <label class="btn btn-primary">
+                                        <input type="radio" name="gender" value="female">
+                                            Female
+                                    </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Join Chat</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+
+            <div class="col-md-8">
+                <div class="container-fluid room-padding">
+                    <div class="row">
+                        <div class="roomChat" id="messagesRecieved">
+                        </div>
+                    </div>
+                </div>
+                <div class="container-fluid room-padding bg-primary">
+                    <form id="formChat">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <textarea class="form-control" type="text " id="messagesSend" placeholder="Enter Messages "></textarea>
+                            </div>
+                            <div class="col-md-12 text-right">
+                                <button class="btn btn-success" type="submit " id="btnSend ">Kirim</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="container-fluid room-padding">
+                    <div class="row">
+                        <div class="infoUser">
+                            <h4 class="text-white text-center">Profile User</h4>
+                            <img src="/img/man.png" alt="User Image" class="rounded-circle">
+                            <span id="nama"></span><br>
+                            <span class="glyphicon glyphicon-envelope"> </span><span id="email"></span><br>
+                            <span class="glyphicon glyphicon-user"></span><span id="gender"></span>
+                            <div class="listUser" id="listUser">
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/js/jquery-3.2.1.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/socket.io/socket.io.js "></script>
+    <script src="/js/moment.min.js"></script>
+    <script>
+        let nama = '';
+        let email = '';
+        let gender = '';
+
+        $(document).ready(() => {
+            let socket = io();
+            if (nama == '') {
+                $('#modalJoin').modal('show');
+            }
+
+            $('#formJoin').submit(() => {
+                nama = $('#txtNama').val();
+                email = $('#txtEmail').val();
+                gender = $('input[name=gender]:checked').val();
+                socket.emit('newUser', nama);
+                $('#nama').html(nama);
+                $('#email').html(email);
+                $('#gender').html(gender);
+                $('#modalJoin').modal('hide');
+                return false;
+            });
+
+            $('#formChat').submit(() => {
+                socket.emit('newMessages', $('#messagesSend').val(), nama, moment().format('LT'));
+                $('#messagesSend').val('');
+                return false;
+            });
+
+            socket.on('newUser', (nama) => {
+                $('#messagesRecieved').append($('<h5 class="text-center">').text('User ' + nama + ' Telah Bergabung ' + moment().format('LT')));
+                $('.roomChat').animate({
+                    scrollTop: $('.roomChat').prop('scrollHeight')
+                }, 500);
+            });
+
+            socket.on('newMessages', (msg, nama, time) => {
+                $('#messagesRecieved').append($('<img src="/img/mansmall.png" alt="User Image" class="rounded-circle"><span>').text('    ' + nama));
+                $('#messagesRecieved').append($('<div class="teksChat">').text(msg));
+                $('#messagesRecieved').append($('<span class="txtTime">').text(time));
+                $('.roomChat').animate({
+                    scrollTop: $('.roomChat').prop('scrollHeight')
+                }, 500);
+            });
+
+            socket.on('listUser', (people) => {
+                $.each(people, (index, val) => {
+                    $('#listUser').append($('<br><img src="/img/user.png" alt="User Image" class="rounded-circle"><span>').text('    ' + val));
+                });
+            });
+
+            socket.on('userDisconnect', (_id) => {
+                $('#messagesRecieved').append($('<h5 class="text-center">').text('User ' + _id + 'Telah Keluar ' + moment().format('LTS')));
+                $('.roomChat').animate({
+                    scrollTop: $('.roomChat').prop('scrollHeight')
+                }, 500);
+            });
+
+
+        });
+    </script>
+    <center>
+        <div>Icons made by <a href="https://www.flaticon.com/authors/roundicons" title="Roundicons">Roundicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/"
+                title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></div>
+</body>
+
+</html>
